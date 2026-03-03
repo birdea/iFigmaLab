@@ -3,12 +3,36 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'jotai';
 import FigmaMcpPanel from './FigmaMcpPanel';
 
-// Mock fetch for all test cases
-global.fetch = jest.fn() as jest.Mock;
+// Mock useFigmaAuth hook
+const mockLogin = jest.fn();
+const mockLogout = jest.fn();
+let mockIsAuthenticated = false;
+let mockAccessToken = '';
+
+jest.mock('../../../hooks/useFigmaAuth', () => ({
+    useFigmaAuth: () => ({
+        isAuthenticated: mockIsAuthenticated,
+        accessToken: mockAccessToken,
+        userInfo: null,
+        login: mockLogin,
+        logout: mockLogout,
+    }),
+}));
+
+// Mock figmaApi
+jest.mock('../../../services/figmaApi', () => ({
+    fetchDesignContext: jest.fn(),
+    fetchScreenshot: jest.fn(),
+    checkMcpStatus: jest.fn(),
+}));
+
+import { fetchDesignContext, fetchScreenshot } from '../../../services/figmaApi';
 
 describe('FigmaMcpPanel', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockIsAuthenticated = false;
+        mockAccessToken = '';
     });
 
     const renderComponent = () => {
@@ -19,265 +43,136 @@ describe('FigmaMcpPanel', () => {
         );
     };
 
-    it('renders the component with default unknown state', () => {
+    it('renders the panel title', () => {
         renderComponent();
         expect(screen.getByText('Figma MCP 연동')).toBeInTheDocument();
-        expect(screen.getAllByText('(–) : 확인 불가')).toHaveLength(2);
     });
 
-    it('checks status and updates connected state successfully', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async () => {
-            return { ok: true, json: async () => ({ connected: true }) };
-        });
-
+    it('shows sign in button when not authenticated', () => {
         renderComponent();
-        const applyBtn = screen.getAllByText('적용')[1];
-        fireEvent.click(applyBtn);
-
-        await waitFor(() => {
-            expect(screen.getAllByText('(●) : 연결됨')).toHaveLength(2);
-        });
+        expect(screen.getByText('Figma로 로그인')).toBeInTheDocument();
     });
 
-    it('checks status and handles disconnected state if API fails', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async () => {
-            throw new Error('Network error');
-        });
-
+    it('calls login when sign in button is clicked', () => {
         renderComponent();
-        const applyBtn = screen.getAllByText('적용')[1];
-        fireEvent.click(applyBtn);
-
-        await waitFor(() => {
-            expect(screen.getByText('(○) : 연결 안 됨')).toBeInTheDocument(); // proxy
-            expect(screen.getByText('(–) : 확인 불가')).toBeInTheDocument();  // MCP unknown
-        });
+        fireEvent.click(screen.getByText('Figma로 로그인'));
+        expect(mockLogin).toHaveBeenCalled();
     });
 
-    it('fetches context context successfully given valid nodeId', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
-            return { ok: true, text: async () => JSON.stringify({ data: 'mocked figma context' }) };
-        });
-
+    it('shows authenticated state and sign out button when authenticated', () => {
+        mockIsAuthenticated = true;
+        mockAccessToken = 'test-token';
         renderComponent();
+        expect(screen.getByText('인증됨')).toBeInTheDocument();
+        expect(screen.getByText('로그아웃')).toBeInTheDocument();
+    });
 
-        const nodeIdInput = screen.getByPlaceholderText(/22041:218191/);
-        fireEvent.change(nodeIdInput, { target: { value: '1234:5678' } });
+    it('calls logout when sign out button is clicked', () => {
+        mockIsAuthenticated = true;
+        mockAccessToken = 'test-token';
+        renderComponent();
+        fireEvent.click(screen.getByText('로그아웃'));
+        expect(mockLogout).toHaveBeenCalled();
+    });
+
+    it('disables fetch buttons when not authenticated', () => {
+        renderComponent();
+        const fetchBtn = screen.getByText('데이터 가져오기');
+        expect(fetchBtn).toBeDisabled();
+    });
+
+    it('displays error when empty URL is submitted', async () => {
+        mockIsAuthenticated = true;
+        mockAccessToken = 'test-token';
+        renderComponent();
 
         const fetchBtn = screen.getByText('데이터 가져오기');
         fireEvent.click(fetchBtn);
 
         await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining('/api/figma/fetch-context'),
-                expect.objectContaining({
-                    method: 'POST',
-                    body: expect.stringContaining('"nodeId":"1234:5678"'),
-                })
+            expect(screen.getByText('Figma URL을 입력해주세요.')).toBeInTheDocument();
+        });
+    });
+
+    it('displays error when invalid URL is submitted', async () => {
+        mockIsAuthenticated = true;
+        mockAccessToken = 'test-token';
+        renderComponent();
+
+        const urlInput = screen.getByPlaceholderText(/figma\.com\/design/);
+        fireEvent.change(urlInput, { target: { value: 'not-a-figma-url' } });
+
+        const fetchBtn = screen.getByText('데이터 가져오기');
+        fireEvent.click(fetchBtn);
+
+        await waitFor(() => {
+            expect(screen.getByText(/올바른 Figma URL을 입력해주세요/)).toBeInTheDocument();
+        });
+    });
+
+    it('fetches context successfully with valid Figma URL', async () => {
+        mockIsAuthenticated = true;
+        mockAccessToken = 'test-token';
+        (fetchDesignContext as jest.Mock).mockResolvedValue({ data: 'mocked context' });
+
+        renderComponent();
+
+        const urlInput = screen.getByPlaceholderText(/figma\.com\/design/);
+        fireEvent.change(urlInput, {
+            target: { value: 'https://www.figma.com/design/abc123/MyDesign?node-id=22041-218191' },
+        });
+
+        const fetchBtn = screen.getByText('데이터 가져오기');
+        fireEvent.click(fetchBtn);
+
+        await waitFor(() => {
+            expect(fetchDesignContext).toHaveBeenCalledWith(
+                'https://www.figma.com/design/abc123/MyDesign?node-id=22041-218191',
+                'test-token',
             );
         });
     });
 
-    it('displays error message when empty nodeId is submitted for context fetch', async () => {
+    it('displays error when context fetch fails', async () => {
+        mockIsAuthenticated = true;
+        mockAccessToken = 'test-token';
+        (fetchDesignContext as jest.Mock).mockRejectedValue(new Error('Network error'));
+
         renderComponent();
+
+        const urlInput = screen.getByPlaceholderText(/figma\.com\/design/);
+        fireEvent.change(urlInput, {
+            target: { value: 'https://www.figma.com/design/abc123/MyDesign?node-id=22041-218191' },
+        });
 
         const fetchBtn = screen.getByText('데이터 가져오기');
         fireEvent.click(fetchBtn);
 
         await waitFor(() => {
-            expect(screen.getByText('Node ID 또는 Figma URL을 입력해주세요.')).toBeInTheDocument();
-        });
-    });
-
-    it('displays error message when invalid nodeId is submitted for context fetch', async () => {
-        renderComponent();
-
-        const nodeIdInput = screen.getByPlaceholderText(/22041:218191/);
-        fireEvent.change(nodeIdInput, { target: { value: 'invalid-string' } });
-
-        const fetchBtn = screen.getByText('데이터 가져오기');
-        fireEvent.click(fetchBtn);
-
-        await waitFor(() => {
-            expect(screen.getByText('올바른 Node ID(예: 22041:218191) 또는 Figma URL을 입력해주세요.')).toBeInTheDocument();
-        });
-    });
-
-    it('fetch context handles network/server errors (Edge case)', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
-            return { ok: false, status: 500, text: async () => JSON.stringify({ error: 'Internal Server Error' }) };
-        });
-
-        renderComponent();
-
-        const nodeIdInput = screen.getByPlaceholderText(/22041:218191/);
-        fireEvent.change(nodeIdInput, { target: { value: '1234:5678' } });
-
-        const fetchBtn = screen.getByText('데이터 가져오기');
-        fireEvent.click(fetchBtn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Internal Server Error')).toBeInTheDocument();
-        });
-    });
-
-    it('fetch context handles invalid JSON response (Edge case)', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
-            return { ok: true, text: async () => '<html>Not JSON</html>' };
-        });
-
-        renderComponent();
-
-        const nodeIdInput = screen.getByPlaceholderText(/22041:218191/);
-        fireEvent.change(nodeIdInput, { target: { value: '1234:5678' } });
-
-        const fetchBtn = screen.getByText('데이터 가져오기');
-        fireEvent.click(fetchBtn);
-
-        await waitFor(() => {
-            expect(screen.getByText(/서버 응답 오류 \(proxy-server 재시작 필요\)/)).toBeInTheDocument();
+            expect(screen.getByText('Network error')).toBeInTheDocument();
         });
     });
 
     it('fetches screenshot successfully', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
-            return { ok: true, text: async () => JSON.stringify({ data: 'base64image', mimeType: 'image/jpeg' }) };
-        });
+        mockIsAuthenticated = true;
+        mockAccessToken = 'test-token';
+        (fetchScreenshot as jest.Mock).mockResolvedValue({ data: 'base64data', mimeType: 'image/png' });
 
         renderComponent();
 
-        const applyBtn = screen.getAllByText('적용')[1];
-        fireEvent.click(applyBtn);
-
-        await waitFor(() => {
-            expect(screen.getAllByText('(●) : 연결됨')[0]).toBeInTheDocument();
+        const urlInput = screen.getByPlaceholderText(/figma\.com\/design/);
+        fireEvent.change(urlInput, {
+            target: { value: 'https://www.figma.com/design/abc123/MyDesign?node-id=1-2' },
         });
 
-        const nodeIdInput = screen.getByPlaceholderText(/22041:218191/);
-        fireEvent.change(nodeIdInput, { target: { value: '1234:5678' } });
-
-        const screenshotBtn = screen.getByRole('button', { name: /스크린샷/ });
+        const screenshotBtn = screen.getByText('스크린샷');
         fireEvent.click(screenshotBtn);
 
         await waitFor(() => {
-            expect(screen.getByAltText('Figma 스크린샷')).toBeInTheDocument();
-            expect(screen.getByAltText('Figma 스크린샷')).toHaveAttribute('src', 'data:image/jpeg;base64,base64image');
+            expect(fetchScreenshot).toHaveBeenCalledWith(
+                'https://www.figma.com/design/abc123/MyDesign?node-id=1-2',
+                'test-token',
+            );
         });
-    });
-
-    it('fetch screenshot handles API error (Edge case)', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
-            return { ok: false, text: async () => JSON.stringify({ error: 'Screenshot generation failed limit reached' }) };
-        });
-
-        renderComponent();
-
-        const applyBtn = screen.getAllByText('적용')[1];
-        fireEvent.click(applyBtn);
-
-        await waitFor(() => {
-            expect(screen.getAllByText('(●) : 연결됨')[0]).toBeInTheDocument();
-        });
-
-        const nodeIdInput = screen.getByPlaceholderText(/22041:218191/);
-        fireEvent.change(nodeIdInput, { target: { value: '1234-5678' } }); // Valid alternative format
-
-        const screenshotBtn = screen.getByRole('button', { name: /스크린샷/ });
-        fireEvent.click(screenshotBtn);
-
-        await waitFor(() => {
-            expect(screen.getByText('Screenshot generation failed limit reached')).toBeInTheDocument();
-        });
-    });
-
-    it('renders proxy server URL input with default value', () => {
-        renderComponent();
-        const input = screen.getByPlaceholderText('http://localhost:3006');
-        expect(input).toBeInTheDocument();
-        expect(input).toHaveValue('http://localhost:3006');
-    });
-
-    it('updates proxy server URL on input change', () => {
-        renderComponent();
-        const input = screen.getByPlaceholderText('http://localhost:3006');
-        fireEvent.change(input, { target: { value: 'http://localhost:3010' } });
-        expect(input).toHaveValue('http://localhost:3010');
-    });
-
-    it('auto-detect finds proxy and updates URL', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async (url: string) => {
-            // 3006~3008은 응답 없음, 3009에 proxy 존재 시뮬레이션
-            if (String(url).includes('localhost:3009')) {
-                return { ok: true, json: async () => ({ connected: false }) };
-            }
-            throw new Error('ECONNREFUSED');
-        });
-
-        renderComponent();
-
-        const detectBtn = screen.getByText('자동 감지');
-        fireEvent.click(detectBtn);
-
-        await waitFor(() => {
-            const input = screen.getByPlaceholderText('http://localhost:3006');
-            expect(input).toHaveValue('http://localhost:3009');
-        });
-    });
-
-    it('auto-detect shows detecting state and resets when no proxy found', async () => {
-        (global.fetch as jest.Mock).mockImplementation(async () => {
-            throw new Error('ECONNREFUSED');
-        });
-
-        renderComponent();
-
-        const detectBtn = screen.getByText('자동 감지');
-        fireEvent.click(detectBtn);
-
-        // 버튼이 즉시 비활성화됨
-        expect(detectBtn).toBeDisabled();
-
-        // 스캔 완료 후 버튼 복구
-        await waitFor(() => {
-            expect(screen.getByText('자동 감지')).not.toBeDisabled();
-        }, { timeout: 5000 });
-    });
-
-    it('pauses polling when tab is hidden and resumes when visible', async () => {
-        jest.useFakeTimers();
-        (global.fetch as jest.Mock).mockResolvedValue({
-            ok: true,
-            json: async () => ({ connected: true }),
-        });
-
-        renderComponent();
-
-        // Initial poll happens on mount
-        await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-        const callCountAfterMount = (global.fetch as jest.Mock).mock.calls.length;
-
-        // Hide tab
-        Object.defineProperty(document, 'visibilityState', { value: 'hidden', writable: true, configurable: true });
-        fireEvent(document, new Event('visibilitychange'));
-
-        // Advance timers - should NOT call fetch while hidden
-        jest.advanceTimersByTime(20000);
-        expect((global.fetch as jest.Mock).mock.calls.length).toBe(callCountAfterMount);
-
-        // Show tab
-        Object.defineProperty(document, 'visibilityState', { value: 'visible', writable: true, configurable: true });
-        fireEvent(document, new Event('visibilitychange'));
-
-        // Should resume polling
-        jest.advanceTimersByTime(0);
-        await waitFor(() => expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(callCountAfterMount));
-
-        jest.useRealTimers();
     });
 });
-

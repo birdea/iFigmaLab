@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
+import OAuthCallback from './components/OAuthCallback';
 import ErrorBoundary from './components/ErrorBoundary';
 import './i18n/config';
 import { reportError } from './utils/errorReporter';
@@ -27,10 +28,11 @@ if (!container) {
   console.error('[Bootstrap] Root element not found');
 } else {
   const root = createRoot(container);
+  const isOAuthCallback = window.location.pathname === '/oauth/callback';
   root.render(
     <React.StrictMode>
       <ErrorBoundary>
-        <App />
+        {isOAuthCallback ? <OAuthCallback /> : <App />}
       </ErrorBoundary>
     </React.StrictMode>
   );

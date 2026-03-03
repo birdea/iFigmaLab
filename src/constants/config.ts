@@ -18,14 +18,11 @@ export const MAX_UNLOCK_ATTEMPTS = 5;
 /** Duration of PIN lockout in milliseconds (30 seconds) */
 export const LOCKOUT_DURATION_MS = 30_000;
 
-/** Gemini generateContent API request timeout in milliseconds (2 minutes) */
-export const API_TIMEOUT_MS = 120_000;
+/** Gemini generateContent API request timeout in milliseconds (5 minutes) */
+export const API_TIMEOUT_MS = 300_000;
 
 /** Token count API request timeout in milliseconds (30 seconds) */
 export const COUNT_TOKENS_TIMEOUT_MS = 30_000;
 
 /** Maximum number of lines retained in the debug log textarea */
 export const MAX_DEBUG_LOG_LINES = 500;
-
-/** Figma MCP connection polling interval in milliseconds (10 seconds) */
-export const MCP_POLL_INTERVAL_MS = 10_000;

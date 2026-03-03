@@ -2,6 +2,7 @@ node_modules
 dist
 dist-server
 .env
+workers/.dev.vars
 
 # Module Federation Types
 @mf-types

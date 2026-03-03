@@ -17,6 +17,7 @@ module.exports = (env, argv) => {
       port: parseInt(process.env.FRONTEND_PORT || '3005', 10),
       host: '0.0.0.0',
       allowedHosts: 'all',
+      historyApiFallback: true,
       headers: {
         // 개발 환경 전용 — 프로덕션은 public/_headers 파일로 관리
         "Access-Control-Allow-Origin": "*",
@@ -68,9 +69,10 @@ module.exports = (env, argv) => {
     },
     plugins: [
       new webpack.DefinePlugin({
-        'process.env.PROXY_URL': JSON.stringify(process.env.PROXY_URL || 'http://localhost:3006'),
-        'process.env.FIGMA_MCP_URL': JSON.stringify(process.env.FIGMA_MCP_URL || 'http://localhost:3845'),
         'process.env.NODE_ENV': JSON.stringify(isProd ? 'production' : 'development'),
+        'process.env.FIGMA_OAUTH_CLIENT_ID': JSON.stringify(process.env.FIGMA_OAUTH_CLIENT_ID || ''),
+        'process.env.FIGMA_OAUTH_REDIRECT_URI': JSON.stringify(process.env.FIGMA_OAUTH_REDIRECT_URI || ''),
+        'process.env.WORKERS_API_URL': JSON.stringify(process.env.WORKERS_API_URL || 'http://localhost:8787'),
         'process.env.SYSTEM_PROMPT': JSON.stringify(process.env.SYSTEM_PROMPT ?? undefined),
         'process.env.MAX_OUTPUT_TOKENS': JSON.stringify(process.env.MAX_OUTPUT_TOKENS ?? undefined),
         'process.env.APP_VERSION': JSON.stringify(require('./package.json').version),

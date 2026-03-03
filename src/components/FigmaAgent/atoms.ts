@@ -24,22 +24,15 @@ export const selectedModelAtom = atom<GeminiModel>(DEFAULT_MODEL);
 // 동적으로 Fetch한 Model 리스트 (초기값은 하드코딩된 리스트)
 export const geminiModelsAtom = atom<GeminiModelEntry[]>(GEMINI_MODELS_DEFAULT);
 
-// Figma MCP proxy server URL
-export const proxyServerUrlAtom = atomWithStorage<string>(
-  'proxyServerUrl',
-  process.env.PROXY_URL || 'http://localhost:3006'
-);
+// Figma OAuth
+export const figmaAccessTokenAtom = atomWithStorage<string>('figmaAccessToken', '');
+export const figmaRefreshTokenAtom = atomWithStorage<string>('figmaRefreshToken', '');
+export const figmaUserInfoAtom = atom<{ email: string; name: string } | null>(null);
 
-// Figma Desktop App MCP server URL
-export const figmaMcpServerUrlAtom = atomWithStorage<string>(
-  'figmaMcpServerUrl',
-  process.env.FIGMA_MCP_URL || 'http://localhost:3845'
-);
+// Figma URL (전체 URL 저장 — fileKey + nodeId 추출용)
+export const figmaUrlAtom = atom<string>('');
 
-// Figma Target Node ID
-export const figmaNodeIdAtom = atom<string>('');
-
-// Figma MCP Connection 상태: true=연결됨, false=연결 안 됨, null=확인 불가(Proxy 미도달)
+// Figma MCP Connection 상태: true=연결됨, false=연결 안 됨, null=확인 불가
 export const figmaConnectedAtom = atom<boolean | null>(null);
 
 // MCP 데이터 입력
