@@ -1,15 +1,23 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAtomValue, Provider } from 'jotai';
 import styles from './App.module.scss';
 import FigmaAgent from './components/FigmaAgent';
 import AgentSetupPanel from './components/FigmaAgent/ControlLayer/AgentSetupPanel';
-import { generateStatusAtom, generatedHtmlAtom } from './components/FigmaAgent/atoms';
+import ScreenshotSidePanel from './components/FigmaAgent/ScreenshotSidePanel';
+import { generateStatusAtom, generatedHtmlAtom, screenshotAtom } from './components/FigmaAgent/atoms';
 import { sharedStore } from './shared/store';
 
 const version = process.env.APP_VERSION;
 const HelpPage = React.lazy(() => import('./components/HelpPage'));
+
+const PanelRightIcon: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="1.5" y="1.5" width="15" height="15" rx="2.5" stroke="currentColor" strokeWidth="1.5"/>
+    <line x1="11.5" y1="1.5" x2="11.5" y2="16.5" stroke="currentColor" strokeWidth="1.5"/>
+  </svg>
+);
 
 type TabId = 'AGENT' | 'MCP' | 'VIEW' | 'HELP';
 
@@ -100,6 +108,34 @@ const FigmaLabApp: React.FC = () => {
   const generateStatus = useAtomValue(generateStatusAtom, { store: sharedStore });
   const generatedHtml = useAtomValue(generatedHtmlAtom, { store: sharedStore });
 
+  const screenshot = useAtomValue(screenshotAtom, { store: sharedStore });
+  const [showRightPanel, setShowRightPanel] = useState(true);
+  const [rightWidth, setRightWidth] = useState(300);
+
+  // 새 스크린샷이 캡처되면 패널 자동 오픈
+  useEffect(() => {
+    if (screenshot) setShowRightPanel(true);
+  }, [screenshot]);
+
+  const rightResizerRef = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const handleRightResizerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    rightResizerRef.current = { startX: e.clientX, startWidth: rightWidth };
+  }, [rightWidth]);
+
+  const handleRightResizerMove = useCallback((e: React.PointerEvent) => {
+    if (!rightResizerRef.current) return;
+    const delta = rightResizerRef.current.startX - e.clientX;
+    const newWidth = Math.max(180, Math.min(600, rightResizerRef.current.startWidth + delta));
+    setRightWidth(newWidth);
+  }, []);
+
+  const handleRightResizerUp = useCallback(() => {
+    rightResizerRef.current = null;
+  }, []);
+
   const prevStatus = useRef(generateStatus);
 
   // 생성 상태(generation status) 변경 감지 시 Toast 출력 및 VIEW 탭 갱신
@@ -172,14 +208,24 @@ const FigmaLabApp: React.FC = () => {
               </button>
             ))}
           </div>
+          <span className={styles.menuDivider} />
+          <button
+            className={`${styles.panelBtn} ${screenshot && showRightPanel ? styles.panelBtnActive : ''}`}
+            aria-label={t('panel.toggle_screenshot')}
+            aria-pressed={screenshot ? showRightPanel : false}
+            onClick={() => setShowRightPanel(v => !v)}
+            disabled={!screenshot}
+          >
+            <PanelRightIcon />
+          </button>
         </div>
       </div>
 
       {/* Body */}
       <div className={styles.body}>
-        {/* Main Content */}
-        <div className={styles.content}>
-          <Provider store={sharedStore}>
+        <Provider store={sharedStore}>
+          {/* Main Content */}
+          <div className={styles.content}>
             <div id="panel-AGENT" role="tabpanel" aria-labelledby="tab-AGENT" className={getTabPanelClass('AGENT')}>
               <AgentSetupPanel />
             </div>
@@ -194,8 +240,26 @@ const FigmaLabApp: React.FC = () => {
                 <HelpPage />
               </Suspense>
             </div>
-          </Provider>
-        </div>
+          </div>
+
+          {/* Right Sidebar — screenshot preview */}
+          {screenshot && showRightPanel && (
+            <>
+              <div
+                className={styles.resizer}
+                onPointerDown={handleRightResizerDown}
+                onPointerMove={handleRightResizerMove}
+                onPointerUp={handleRightResizerUp}
+              />
+              <div
+                className={`${styles.sidebar} ${styles.sidebarRight} ${styles.sidebarOpen}`}
+                style={{ width: rightWidth }}
+              >
+                <ScreenshotSidePanel />
+              </div>
+            </>
+          )}
+        </Provider>
       </div>
 
       {/* Toast Popup */}

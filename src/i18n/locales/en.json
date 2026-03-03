@@ -44,12 +44,13 @@
     },
     "mcp": {
         "title": "Figma MCP Integration",
-        "server_url": "Server URL",
+        "server_url": "MCP Server URL",
         "node_id": "Node ID",
         "node_id_placeholder": "22041:218191 or Figma URL",
         "apply": "Apply",
         "connected": "Connected",
         "disconnected": "Disconnected",
+        "unknown": "Unknown",
         "fetch_data": "Fetch Data",
         "fetching": "Fetching...",
         "screenshot": "Screenshot",
@@ -59,7 +60,11 @@
         "error_node_id_required": "Please enter Node ID or Figma URL.",
         "error_node_id_invalid": "Please enter valid Node ID or Figma URL.",
         "error_server_response": "Server response error (proxy-server restart required): {{text}}",
-        "screenshot_alt": "Figma screenshot"
+        "proxy_url": "Proxy Server URL",
+        "auto_detect": "Auto Detect",
+        "detecting": "Detecting...",
+        "screenshot_alt": "Figma screenshot",
+        "fullscreen": "Full Screen"
     },
     "input": {
         "title": "Design Prompt",
@@ -99,5 +104,8 @@
     },
     "nav": {
         "aria_label": "Main navigation tabs"
+    },
+    "panel": {
+        "toggle_screenshot": "Toggle screenshot panel"
     }
 }

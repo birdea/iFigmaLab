@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useAtom } from 'jotai';
-import { figmaNodeIdAtom, figmaConnectedAtom, mcpDataAtom, screenshotAtom, screenshotMimeTypeAtom, proxyServerUrlAtom, figmaMcpServerUrlAtom } from '../atoms';
+import { useAtom, useSetAtom } from 'jotai';
+import { figmaNodeIdAtom, figmaConnectedAtom, mcpDataAtom, screenshotAtom, screenshotMimeTypeAtom, proxyServerUrlAtom, figmaMcpServerUrlAtom, debugLogAtom } from '../atoms';
 import { parseNodeId } from '../figmaNodeUtils';
 import styles from '../FigmaAgent.module.scss';
-import { MCP_POLL_INTERVAL_MS } from '../../../constants/config';
+import { MCP_POLL_INTERVAL_MS, MAX_DEBUG_LOG_LINES } from '../../../constants/config';
 
 const POLL_INTERVAL = MCP_POLL_INTERVAL_MS;
 
@@ -25,39 +25,119 @@ const FigmaMcpPanel: React.FC = () => {
   const [nodeId, setNodeId] = useAtom(figmaNodeIdAtom);
   const [connected, setConnected] = useAtom(figmaConnectedAtom);
   const [, setMcpData] = useAtom(mcpDataAtom);
-  const [screenshot, setScreenshot] = useAtom(screenshotAtom);
-  const [screenshotMimeType, setScreenshotMimeType] = useAtom(screenshotMimeTypeAtom);
-  const [proxyServerUrl] = useAtom(proxyServerUrlAtom);
+  const [, setScreenshot] = useAtom(screenshotAtom);
+  const [, setScreenshotMimeType] = useAtom(screenshotMimeTypeAtom);
+  const [proxyServerUrl, setProxyServerUrl] = useAtom(proxyServerUrlAtom);
   const [figmaMcpServerUrl, setFigmaMcpServerUrl] = useAtom(figmaMcpServerUrlAtom);
+  const [proxyReachable, setProxyReachable] = useState<boolean | null>(null);
+  const [detecting, setDetecting] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [fetchingScreenshot, setFetchingScreenshot] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isVisibleRef = useRef(true);
+  // 폴링에 사용할 "커밋된" URL — Apply 클릭 시에만 갱신
+  const committedProxyUrlRef = useRef(proxyServerUrl);
+  const committedMcpUrlRef = useRef(figmaMcpServerUrl);
+
+  const setDebugLog = useSetAtom(debugLogAtom);
+  const appendLog = useCallback((line: string) => {
+    const ts = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+    setDebugLog(prev => {
+      const newLine = `[${ts}] ${line}\n`;
+      const combined = prev + newLine;
+      const lines = combined.split('\n');
+      if (lines.length > MAX_DEBUG_LOG_LINES) {
+        return lines.slice(lines.length - MAX_DEBUG_LOG_LINES).join('\n');
+      }
+      return combined;
+    });
+  }, [setDebugLog]);
 
 
   const resolvedNodeId = useMemo(() => parseNodeId(nodeId), [nodeId]);
 
-
+  // checkStatus는 ref를 읽으므로 URL atom 변경으로 재생성되지 않음
   const checkStatus = useCallback(async () => {
+    const proxyUrl = committedProxyUrlRef.current;
+    const mcpUrl = committedMcpUrlRef.current;
+    appendLog(`[Proxy] Checking ${proxyUrl} …`);
     try {
-      const url = new URL(`${proxyServerUrl}/api/figma/status`);
-      url.searchParams.set('mcpServerUrl', figmaMcpServerUrl);
+      const url = new URL(`${proxyUrl}/api/figma/status`);
+      url.searchParams.set('mcpServerUrl', mcpUrl);
       const res = await fetch(url.toString());
+      if (!res.ok) {
+        setProxyReachable(false);
+        setConnected(null);
+        appendLog(`[Proxy] ✗ Unexpected HTTP ${res.status}`);
+        return false;
+      }
       const data = await res.json();
+      setProxyReachable(true);
+      appendLog(`[Proxy] ✓ Reachable`);
       if (isConnectionStatus(data)) {
         const isConnected = data.connected;
         setConnected(isConnected);
+        appendLog(isConnected
+          ? `[MCP] ✓ Connected: ${mcpUrl}`
+          : `[MCP] ✗ Figma not connected (mcpServerUrl=${mcpUrl})`);
         return isConnected;
       } else {
         setConnected(false);
+        appendLog(`[MCP] ✗ Unexpected response: ${JSON.stringify(data)}`);
         return false;
       }
-    } catch {
-      setConnected(false);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setProxyReachable(false);
+      setConnected(null); // Proxy 미도달 → MCP 상태 알 수 없음
+      appendLog(`[Proxy] ✗ Unreachable: ${msg}`);
       return false;
     }
-  }, [proxyServerUrl, figmaMcpServerUrl, setConnected]);
+  }, [setConnected, setProxyReachable, appendLog]);
+
+  const handleApplyProxy = useCallback(() => {
+    committedProxyUrlRef.current = proxyServerUrl;
+    appendLog(`[Proxy] Apply → ${proxyServerUrl}`);
+    checkStatus();
+  }, [proxyServerUrl, checkStatus, appendLog]);
+
+  /** 3006~3015 범위를 순차 스캔하여 응답하는 proxy 포트를 자동 발견합니다. */
+  const handleAutoDetect = useCallback(async () => {
+    setDetecting(true);
+    appendLog('[Proxy] Auto-detecting proxy server port (3006–3015)…');
+    const mcpUrl = committedMcpUrlRef.current;
+    for (let port = 3006; port <= 3015; port++) {
+      const candidateUrl = `http://localhost:${port}`;
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 1500);
+        const statusUrl = new URL(`${candidateUrl}/api/figma/status`);
+        statusUrl.searchParams.set('mcpServerUrl', mcpUrl);
+        const res = await fetch(statusUrl.toString(), { signal: ctrl.signal });
+        clearTimeout(timer);
+        if (res.ok) {
+          setProxyServerUrl(candidateUrl);
+          committedProxyUrlRef.current = candidateUrl;
+          appendLog(`[Proxy] ✓ Found proxy at ${candidateUrl}`);
+          setDetecting(false);
+          checkStatus();
+          return;
+        }
+      } catch {
+        // 해당 포트에 서버 없음 — 다음 포트 시도
+      }
+      appendLog(`[Proxy] … ${port} no response`);
+    }
+    appendLog('[Proxy] ✗ No proxy found in range 3006–3015');
+    setDetecting(false);
+  }, [setProxyServerUrl, checkStatus, appendLog]);
+
+  const handleApplyMcp = useCallback(() => {
+    committedMcpUrlRef.current = figmaMcpServerUrl;
+    appendLog(`[MCP] Apply → ${figmaMcpServerUrl}`);
+    checkStatus();
+  }, [figmaMcpServerUrl, checkStatus, appendLog]);
 
 
   useEffect(() => {
@@ -117,6 +197,7 @@ const FigmaMcpPanel: React.FC = () => {
     setNodeId(resolvedNodeId);
     setFetchingState(true);
     setFetchError('');
+    appendLog(`[Figma] ${endpoint} ← node:${resolvedNodeId} via ${proxyServerUrl}`);
     try {
       const res = await fetch(`${proxyServerUrl}/api/figma/${endpoint}`, {
         method: 'POST',
@@ -129,13 +210,16 @@ const FigmaMcpPanel: React.FC = () => {
         throw new Error(t('mcp.error_server_response', { text: text.slice(0, 120) }));
       }
       if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
+      appendLog(`[Figma] ✓ ${endpoint} OK (${text.length} chars)`);
       onSuccess(json);
     } catch (e) {
-      setFetchError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      appendLog(`[Figma] ✗ ${endpoint} failed: ${msg}`);
+      setFetchError(msg);
     } finally {
       setFetchingState(false);
     }
-  }, [nodeId, resolvedNodeId, proxyServerUrl, figmaMcpServerUrl, setNodeId, t]);
+  }, [nodeId, resolvedNodeId, proxyServerUrl, figmaMcpServerUrl, setNodeId, t, appendLog]);
 
 
   /** Proxy Server와 연계하여 Figma Node 정보를 Fetch 하여 로컬 상태에 주입합니다. */
@@ -162,6 +246,38 @@ const FigmaMcpPanel: React.FC = () => {
       <div className={styles.panelTitle}>{t('mcp.title')}</div>
 
       <div className={styles.formRow}>
+        <label className={styles.formLabel}>{t('mcp.proxy_url')}</label>
+        <div className={styles.inputWithBtn}>
+          <input
+            className={styles.formInput}
+            type="url"
+            placeholder="http://localhost:3006"
+            value={proxyServerUrl}
+            onChange={e => setProxyServerUrl(e.target.value)}
+          />
+          <button
+            className={styles.fetchBtn}
+            onClick={handleApplyProxy}
+            disabled={detecting}
+            type="button"
+          >
+            {t('mcp.apply')}
+          </button>
+          <button
+            className={styles.fetchBtn}
+            onClick={handleAutoDetect}
+            disabled={detecting}
+            type="button"
+          >
+            {detecting ? t('mcp.detecting') : t('mcp.auto_detect')}
+          </button>
+          <span className={proxyReachable === null ? styles.statusUnknown : proxyReachable ? styles.statusConnected : styles.statusDisconnected}>
+            {proxyReachable === null ? `(–) : ${t('mcp.unknown')}` : proxyReachable ? `(●) : ${t('mcp.connected')}` : `(○) : ${t('mcp.disconnected')}`}
+          </span>
+        </div>
+      </div>
+
+      <div className={styles.formRow}>
         <label className={styles.formLabel}>{t('mcp.server_url')}</label>
         <div className={styles.inputWithBtn}>
           <input
@@ -173,13 +289,13 @@ const FigmaMcpPanel: React.FC = () => {
           />
           <button
             className={styles.fetchBtn}
-            onClick={checkStatus}
+            onClick={handleApplyMcp}
             type="button"
           >
             {t('mcp.apply')}
           </button>
-          <span className={connected ? styles.statusConnected : styles.statusDisconnected}>
-            {connected ? `(●) : ${t('mcp.connected')}` : `(○) : ${t('mcp.disconnected')}`}
+          <span className={connected === null ? styles.statusUnknown : connected ? styles.statusConnected : styles.statusDisconnected}>
+            {connected === null ? `(–) : ${t('mcp.unknown')}` : connected ? `(●) : ${t('mcp.connected')}` : `(○) : ${t('mcp.disconnected')}`}
           </span>
         </div>
       </div>
@@ -216,26 +332,6 @@ const FigmaMcpPanel: React.FC = () => {
       </div>
 
 
-      {screenshot && (
-        <div className={styles.screenshotPreview}>
-          <div className={styles.screenshotHeader}>
-            <span className={styles.screenshotLabel}><span aria-hidden="true">📸</span> {t('mcp.screenshot_label')}</span>
-            <button
-              className={styles.screenshotClear}
-              onClick={() => setScreenshot('')}
-              type="button"
-            >
-              <span aria-hidden="true">✕</span> {t('mcp.remove')}
-            </button>
-          </div>
-
-          <img
-            className={styles.screenshotThumb}
-            src={`data:${screenshotMimeType};base64,${screenshot}`}
-            alt={t('mcp.screenshot_alt')}
-          />
-        </div>
-      )}
     </div>
   );
 };

@@ -44,12 +44,13 @@
     },
     "mcp": {
         "title": "Figma MCP 연동",
-        "server_url": "Server URL",
+        "server_url": "MCP 서버 URL",
         "node_id": "Node ID",
         "node_id_placeholder": "22041:218191 또는 Figma URL",
         "apply": "적용",
         "connected": "연결됨",
         "disconnected": "연결 안 됨",
+        "unknown": "확인 불가",
         "fetch_data": "데이터 가져오기",
         "fetching": "가져오는 중...",
         "screenshot": "스크린샷",
@@ -59,7 +60,11 @@
         "error_node_id_required": "Node ID 또는 Figma URL을 입력해주세요.",
         "error_node_id_invalid": "올바른 Node ID(예: 22041:218191) 또는 Figma URL을 입력해주세요.",
         "error_server_response": "서버 응답 오류 (proxy-server 재시작 필요): {{text}}",
-        "screenshot_alt": "Figma 스크린샷"
+        "proxy_url": "프록시 서버 URL",
+        "auto_detect": "자동 감지",
+        "detecting": "감지 중...",
+        "screenshot_alt": "Figma 스크린샷",
+        "fullscreen": "전체 화면"
     },
     "input": {
         "title": "디자인 프롬프트",
@@ -99,5 +104,8 @@
     },
     "nav": {
         "aria_label": "메인 탭 메뉴"
+    },
+    "panel": {
+        "toggle_screenshot": "스크린샷 패널 열기/닫기"
     }
 }
