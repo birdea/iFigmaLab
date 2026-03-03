@@ -41,7 +41,9 @@ const FigmaMcpPanel: React.FC = () => {
 
   const checkStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${proxyServerUrl}/api/figma/status`);
+      const url = new URL(`${proxyServerUrl}/api/figma/status`);
+      url.searchParams.set('mcpServerUrl', figmaMcpServerUrl);
+      const res = await fetch(url.toString());
       const data = await res.json();
       if (isConnectionStatus(data)) {
         const isConnected = data.connected;
@@ -55,7 +57,7 @@ const FigmaMcpPanel: React.FC = () => {
       setConnected(false);
       return false;
     }
-  }, [proxyServerUrl, setConnected]);
+  }, [proxyServerUrl, figmaMcpServerUrl, setConnected]);
 
 
   useEffect(() => {

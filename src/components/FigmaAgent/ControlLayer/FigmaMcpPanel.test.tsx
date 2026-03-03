@@ -55,7 +55,7 @@ describe('FigmaMcpPanel', () => {
 
     it('fetches context context successfully given valid nodeId', async () => {
         (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).endsWith('/status')) return { ok: true, json: async () => ({ connected: true }) };
+            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
             return { ok: true, text: async () => JSON.stringify({ data: 'mocked figma context' }) };
         });
 
@@ -105,7 +105,7 @@ describe('FigmaMcpPanel', () => {
 
     it('fetch context handles network/server errors (Edge case)', async () => {
         (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).endsWith('/status')) return { ok: true, json: async () => ({ connected: true }) };
+            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
             return { ok: false, status: 500, text: async () => JSON.stringify({ error: 'Internal Server Error' }) };
         });
 
@@ -124,7 +124,7 @@ describe('FigmaMcpPanel', () => {
 
     it('fetch context handles invalid JSON response (Edge case)', async () => {
         (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).endsWith('/status')) return { ok: true, json: async () => ({ connected: true }) };
+            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
             return { ok: true, text: async () => '<html>Not JSON</html>' };
         });
 
@@ -143,7 +143,7 @@ describe('FigmaMcpPanel', () => {
 
     it('fetches screenshot successfully', async () => {
         (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).endsWith('/status')) return { ok: true, json: async () => ({ connected: true }) };
+            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
             return { ok: true, text: async () => JSON.stringify({ data: 'base64image', mimeType: 'image/jpeg' }) };
         });
 
@@ -170,7 +170,7 @@ describe('FigmaMcpPanel', () => {
 
     it('fetch screenshot handles API error (Edge case)', async () => {
         (global.fetch as jest.Mock).mockImplementation(async (url) => {
-            if (String(url).endsWith('/status')) return { ok: true, json: async () => ({ connected: true }) };
+            if (String(url).includes('/api/figma/status')) return { ok: true, json: async () => ({ connected: true }) };
             return { ok: false, text: async () => JSON.stringify({ error: 'Screenshot generation failed limit reached' }) };
         });
 
