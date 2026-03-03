@@ -14,7 +14,7 @@ module.exports = (env, argv) => {
     // hidden-source-map: .map 파일 생성하지만 번들에서 참조하지 않아 소스 노출 방지
     devtool: isProd ? 'hidden-source-map' : 'eval-cheap-module-source-map',
     devServer: {
-      port: 3005,
+      port: parseInt(process.env.FRONTEND_PORT || '3005', 10),
       host: '0.0.0.0',
       allowedHosts: 'all',
       headers: {

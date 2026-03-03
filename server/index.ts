@@ -4,9 +4,13 @@ import { generateHtml } from './gemini.js';
 import { checkFigmaStatus, fetchDesignContext, fetchScreenshot } from './figma.js';
 
 const app = express();
-const PORT = 3006;
+const PORT = parseInt(process.env.PROXY_PORT ?? '3006', 10);
 
-app.use(cors({ origin: ['http://localhost:3000', 'http://localhost:3005'] }));
+const allowedOrigins = ['http://localhost:3000', 'http://localhost:3005'];
+const fe = process.env.FRONTEND_PORT;
+if (fe && !allowedOrigins.includes(`http://localhost:${fe}`))
+  allowedOrigins.push(`http://localhost:${fe}`);
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: '10mb' }));
 
 // POST /api/ai/generate
@@ -88,6 +92,14 @@ app.post('/api/figma/fetch-screenshot', async (req: Request, res: Response) => {
   }
 });
 
-app.listen(PORT, () => {
+const srv = app.listen(PORT, () => {
   console.log(`[proxy-server] running at http://localhost:${PORT}`);
+});
+srv.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[proxy-server] ❌ Port ${PORT} already in use.`);
+    console.error(`  → Set PROXY_PORT in .env, or use 'npm run dev' for auto-detection`);
+    process.exit(1);
+  }
+  throw err;
 });
