@@ -650,6 +650,104 @@ $panel-bg: #ffffff;
   display: block;
 }
 
+// ─── Proxy Guide ──────────────────────────────────────────────────────────────
+.proxyGuide {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #fff8e7;
+  border: 1px solid #f0c060;
+  border-radius: 8px;
+}
+
+.proxyGuideTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #7d4f00;
+}
+
+.proxyGuideDesc {
+  font-size: 12px;
+  color: #7d4f00;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.proxyCommandRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.proxyCommand {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  background: #1a1a1a;
+  color: #f8f8f8;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.proxyCopyBtn {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  background: $white;
+  border: 1px solid #f0c060;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #7d4f00;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: #fef3d0;
+  }
+}
+
+.proxyDownloadRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.proxyDownloadLabel {
+  font-size: 12px;
+  color: #7d4f00;
+  flex-shrink: 0;
+}
+
+.proxyDownloadBtn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  background: $white;
+  border: 1px solid #f0c060;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #7d4f00;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background: #fef3d0;
+  }
+}
+
+.proxyGuideHint {
+  font-size: 11px;
+  color: #a07040;
+  margin: 0;
+}
+
 // ─── Status (MCP connected/disconnected) ─────────────────────────────────────
 .statusConnected {
   font-size: 12px;

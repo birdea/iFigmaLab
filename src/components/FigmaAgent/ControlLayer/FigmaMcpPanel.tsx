@@ -34,6 +34,7 @@ const FigmaMcpPanel: React.FC = () => {
   const [fetching, setFetching] = useState(false);
   const [fetchingScreenshot, setFetchingScreenshot] = useState(false);
   const [fetchError, setFetchError] = useState('');
+  const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isVisibleRef = useRef(true);
   // 폴링에 사용할 "커밋된" URL — Apply 클릭 시에만 갱신
@@ -138,6 +139,33 @@ const FigmaMcpPanel: React.FC = () => {
     appendLog(`[MCP] Apply → ${figmaMcpServerUrl}`);
     checkStatus();
   }, [figmaMcpServerUrl, checkStatus, appendLog]);
+
+  const NPX_CMD = 'npx ifigmalab-server';
+
+  const handleCopyCommand = useCallback(() => {
+    navigator.clipboard.writeText(NPX_CMD).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, []);
+
+  const handleDownloadScript = useCallback((platform: 'mac' | 'windows') => {
+    const isMac = platform === 'mac';
+    const content = isMac
+      ? `#!/bin/bash\n${NPX_CMD}\n`
+      : `@echo off\r\n${NPX_CMD}\r\npause\r\n`;
+    const filename = isMac ? 'start-ifigmalab-proxy.command' : 'start-ifigmalab-proxy.bat';
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    appendLog(`[Proxy] Downloaded ${filename}`);
+  }, [appendLog]);
 
 
   useEffect(() => {
@@ -276,6 +304,29 @@ const FigmaMcpPanel: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {proxyReachable === false && (
+        <div className={styles.proxyGuide}>
+          <div className={styles.proxyGuideTitle}>{t('mcp.proxy_guide_title')}</div>
+          <p className={styles.proxyGuideDesc}>{t('mcp.proxy_guide_desc')}</p>
+          <div className={styles.proxyCommandRow}>
+            <code className={styles.proxyCommand}>{NPX_CMD}</code>
+            <button className={styles.proxyCopyBtn} onClick={handleCopyCommand} type="button">
+              {copied ? t('mcp.proxy_guide_copied') : t('mcp.proxy_guide_copy')}
+            </button>
+          </div>
+          <div className={styles.proxyDownloadRow}>
+            <span className={styles.proxyDownloadLabel}>{t('mcp.proxy_guide_download_label')}</span>
+            <button className={styles.proxyDownloadBtn} onClick={() => handleDownloadScript('mac')} type="button">
+              {t('mcp.proxy_guide_download_macos')}
+            </button>
+            <button className={styles.proxyDownloadBtn} onClick={() => handleDownloadScript('windows')} type="button">
+              {t('mcp.proxy_guide_download_windows')}
+            </button>
+          </div>
+          <p className={styles.proxyGuideHint}>{t('mcp.proxy_guide_macos_hint')}</p>
+        </div>
+      )}
 
       <div className={styles.formRow}>
         <label className={styles.formLabel}>{t('mcp.server_url')}</label>

@@ -64,7 +64,15 @@
         "auto_detect": "Auto Detect",
         "detecting": "Detecting...",
         "screenshot_alt": "Figma screenshot",
-        "fullscreen": "Full Screen"
+        "fullscreen": "Full Screen",
+        "proxy_guide_title": "⚠ Proxy server is not running",
+        "proxy_guide_desc": "A local proxy server is required for Figma MCP integration. Run the command below in your terminal or download the launch script.",
+        "proxy_guide_copy": "Copy",
+        "proxy_guide_copied": "Copied ✓",
+        "proxy_guide_download_label": "Download script:",
+        "proxy_guide_download_macos": "⬇ macOS (.command)",
+        "proxy_guide_download_windows": "⬇ Windows (.bat)",
+        "proxy_guide_macos_hint": "Double-click to run after download (first time: right-click → Open)"
     },
     "input": {
         "title": "Design Prompt",

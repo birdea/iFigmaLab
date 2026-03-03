@@ -64,7 +64,15 @@
         "auto_detect": "자동 감지",
         "detecting": "감지 중...",
         "screenshot_alt": "Figma 스크린샷",
-        "fullscreen": "전체 화면"
+        "fullscreen": "전체 화면",
+        "proxy_guide_title": "⚠ 프록시 서버가 실행되지 않고 있습니다",
+        "proxy_guide_desc": "Figma MCP 연동을 위해 로컬에서 프록시 서버를 실행해야 합니다. 아래 명령을 터미널에서 실행하거나 스크립트를 다운로드하세요.",
+        "proxy_guide_copy": "복사",
+        "proxy_guide_copied": "복사됨 ✓",
+        "proxy_guide_download_label": "스크립트 다운로드:",
+        "proxy_guide_download_macos": "⬇ macOS (.command)",
+        "proxy_guide_download_windows": "⬇ Windows (.bat)",
+        "proxy_guide_macos_hint": "다운로드 후 더블클릭 실행 (최초 1회: 우클릭 → 열기)"
     },
     "input": {
         "title": "디자인 프롬프트",

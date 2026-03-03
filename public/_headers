@@ -2,7 +2,7 @@
   # CSP: 허용 출처를 명시적으로 제한
   # script-src 'self'만 허용 (Webpack 번들은 self에서 로드)
   # connect-src: Gemini API + MCP Proxy Server만 허용
-  Content-Security-Policy: default-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com http://localhost http://127.0.0.1; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://generativelanguage.googleapis.com http://localhost:* http://127.0.0.1:*; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
