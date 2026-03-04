@@ -1,6 +1,7 @@
 import type { Env } from '../index';
 
 const FIGMA_TOKEN_URL = 'https://api.figma.com/v1/oauth/token';
+const FIGMA_REFRESH_URL = 'https://api.figma.com/v1/oauth/refresh';
 
 interface TokenRequest {
   code: string;
@@ -19,9 +20,13 @@ function jsonResponse(data: unknown, status: number, cors: Record<string, string
   });
 }
 
+function basicAuth(clientId: string, clientSecret: string): string {
+  return `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
+}
+
 /**
  * POST /api/figma/oauth/token
- * Authorization code → access_token 교환 (client_secret 서버사이드 처리)
+ * Authorization code → access_token 교환 (HTTP Basic Auth로 client 인증)
  */
 export async function handleOAuthToken(
   request: Request,
@@ -36,17 +41,18 @@ export async function handleOAuthToken(
   }
 
   const params = new URLSearchParams({
-    client_id: env.FIGMA_CLIENT_ID,
-    client_secret: env.FIGMA_CLIENT_SECRET,
-    code,
-    code_verifier: codeVerifier,
     redirect_uri: redirectUri,
+    code,
     grant_type: 'authorization_code',
+    code_verifier: codeVerifier,
   });
 
   const res = await fetch(FIGMA_TOKEN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: basicAuth(env.FIGMA_CLIENT_ID, env.FIGMA_CLIENT_SECRET),
+    },
     body: params.toString(),
   });
 
@@ -61,7 +67,7 @@ export async function handleOAuthToken(
 
 /**
  * POST /api/figma/oauth/refresh
- * Refresh token → 새 access_token 발급
+ * Refresh token → 새 access_token 발급 (Figma 전용 refresh 엔드포인트 사용)
  */
 export async function handleOAuthRefresh(
   request: Request,
@@ -76,15 +82,15 @@ export async function handleOAuthRefresh(
   }
 
   const params = new URLSearchParams({
-    client_id: env.FIGMA_CLIENT_ID,
-    client_secret: env.FIGMA_CLIENT_SECRET,
     refresh_token: refreshToken,
-    grant_type: 'refresh_token',
   });
 
-  const res = await fetch(FIGMA_TOKEN_URL, {
+  const res = await fetch(FIGMA_REFRESH_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: basicAuth(env.FIGMA_CLIENT_ID, env.FIGMA_CLIENT_SECRET),
+    },
     body: params.toString(),
   });
 

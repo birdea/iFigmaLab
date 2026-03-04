@@ -25,7 +25,7 @@ interface McpRequest {
  */
 function parseFigmaUrl(url: string): { fileKey: string; nodeId: string } | null {
   const match = url.match(
-    /https?:\/\/(?:www\.)?figma\.com\/design\/([^/]+)\/[^?]*\?[^]*node-id=([^&\s]+)/,
+    /https?:\/\/(?:www\.)?figma\.com\/(?:design|file)\/([^/]+)\/[^?]*\?[^]*node-id=([^&\s]+)/,
   );
   if (!match) return null;
   return { fileKey: match[1], nodeId: match[2].replace(/-/g, ':') };
@@ -99,7 +99,8 @@ export async function handleMcpContext(
     return jsonResponse({ data: result }, 200, cors);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return jsonResponse({ error: message }, 500, cors);
+    const status = (e as Record<string, unknown>).status;
+    return jsonResponse({ error: message }, typeof status === 'number' ? status : 500, cors);
   }
 }
 
@@ -129,6 +130,7 @@ export async function handleMcpScreenshot(
     return jsonResponse({ data: image.data, mimeType: image.mimeType }, 200, cors);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return jsonResponse({ error: message }, 500, cors);
+    const status = (e as Record<string, unknown>).status;
+    return jsonResponse({ error: message }, typeof status === 'number' ? status : 500, cors);
   }
 }

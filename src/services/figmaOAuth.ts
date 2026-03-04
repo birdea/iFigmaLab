@@ -3,7 +3,7 @@ const WORKERS_API = process.env.WORKERS_API_URL || 'http://localhost:8787';
 const CLIENT_ID = process.env.FIGMA_OAUTH_CLIENT_ID || '';
 const REDIRECT_URI = process.env.FIGMA_OAUTH_REDIRECT_URI || `${window.location.origin}/oauth/callback`;
 
-const OAUTH_SCOPES = 'file_content:read';
+const OAUTH_SCOPES = 'file_content:read,current_user:read';
 
 // --- PKCE helpers ---
 
@@ -42,18 +42,18 @@ export async function buildAuthUrl(): Promise<{ url: string; oauthState: OAuthSt
   const codeChallenge = await generateCodeChallenge(codeVerifier);
   const state = generateRandomString(32);
 
-  const params = new URLSearchParams({
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
-    scope: OAUTH_SCOPES,
-    state,
-    response_type: 'code',
-    code_challenge: codeChallenge,
-    code_challenge_method: 'S256',
-  });
+  const qs = [
+    `client_id=${CLIENT_ID}`,
+    `redirect_uri=${encodeURIComponent(REDIRECT_URI)}`,
+    `scope=${OAUTH_SCOPES}`,
+    `state=${state}`,
+    `response_type=code`,
+    `code_challenge=${codeChallenge}`,
+    `code_challenge_method=S256`,
+  ].join('&');
 
   return {
-    url: `${FIGMA_AUTH_URL}?${params.toString()}`,
+    url: `${FIGMA_AUTH_URL}?${qs}`,
     oauthState: { codeVerifier, state },
   };
 }

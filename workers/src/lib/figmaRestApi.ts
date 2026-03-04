@@ -77,7 +77,9 @@ export async function getFileNodes(
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(`Figma API error (${res.status}): ${error}`);
+    const err = new Error(`Figma API error (${res.status}): ${error}`);
+    (err as unknown as Record<string, unknown>).status = res.status;
+    throw err;
   }
 
   const raw = (await res.json()) as Record<string, unknown>;
@@ -104,7 +106,9 @@ export async function getNodeImage(
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(`Figma Image API error (${res.status}): ${error}`);
+    const err = new Error(`Figma Image API error (${res.status}): ${error}`);
+    (err as unknown as Record<string, unknown>).status = res.status;
+    throw err;
   }
 
   const json = (await res.json()) as { images: Record<string, string | null> };

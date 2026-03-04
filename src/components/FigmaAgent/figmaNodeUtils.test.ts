@@ -34,8 +34,17 @@ describe('parseFigmaUrl', () => {
         expect(result!.fileKey).toBe('abc123');
     });
 
-    it('returns null for non-design URLs', () => {
-        expect(parseFigmaUrl('https://www.figma.com/file/abc/MyDesign?node-id=1-2')).toBeNull();
+    it('extracts fileKey and nodeId from Figma /file/ URL', () => {
+        const url = 'https://www.figma.com/file/abc/MyDesign?node-id=1-2';
+        const result = parseFigmaUrl(url);
+        expect(result).toEqual({
+            fullUrl: url,
+            fileKey: 'abc',
+            nodeId: '1:2',
+        });
+    });
+
+    it('returns null for non-figma URLs', () => {
         expect(parseFigmaUrl('https://www.google.com')).toBeNull();
         expect(parseFigmaUrl('')).toBeNull();
         expect(parseFigmaUrl('not a url')).toBeNull();

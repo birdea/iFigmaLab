@@ -4,7 +4,7 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-FIGMA_CLIENT_ID = "bAylr8CfFb4U0zil8yf6bX"
+FIGMA_CLIENT_ID = "pgP8kx7Qeu1B9vtF9DkhKz"
 ALLOWED_ORIGINS = "http://localhost:3005,https://ifigmalab.pages.dev"
 
 # Secrets (set via `wrangler secret put`):

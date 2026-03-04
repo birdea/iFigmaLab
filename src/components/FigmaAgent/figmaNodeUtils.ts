@@ -15,7 +15,7 @@ export interface FigmaUrlParts {
  */
 export function parseFigmaUrl(raw: string): FigmaUrlParts | null {
   const match = raw.match(
-    /https?:\/\/(?:www\.)?figma\.com\/design\/([^/]+)\/[^?]*\?[^]*node-id=([^&\s]+)/
+    /https?:\/\/(?:www\.)?figma\.com\/(?:design|file)\/([^/]+)\/[^?]*\?[^]*node-id=([^&\s]+)/
   );
   if (!match) return null;
   return {
