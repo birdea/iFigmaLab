@@ -596,7 +596,22 @@ $panel-bg: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.screenshotFullscreenBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
   cursor: zoom-out;
+}
+
+.screenshotFullscreenContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .screenshotFullscreenImg {

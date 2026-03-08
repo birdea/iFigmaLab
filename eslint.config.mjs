@@ -44,6 +44,14 @@ export default tseslint.config(
             "@typescript-eslint/no-require-imports": "off"
         }
     },
+    // Node scripts use CommonJS and console output intentionally
+    {
+        files: ["scripts/**/*.js"],
+        rules: {
+            "@typescript-eslint/no-require-imports": "off",
+            "no-console": "off"
+        }
+    },
     // Jest 테스트 및 셋업 파일 — require(), any 타입 허용
     {
         files: ["**/*.test.{ts,tsx}", "**/setupTests.ts"],

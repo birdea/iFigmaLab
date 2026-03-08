@@ -67,11 +67,17 @@ const ScreenshotSidePanel: React.FC = () => {
       {isFullscreen && (
         <div
           className={styles.screenshotFullscreenOverlay}
-          onClick={closeFullscreen}
           role="dialog"
           aria-modal="true"
           aria-label={t('mcp.screenshot_alt')}
         >
+          <button
+            className={styles.screenshotFullscreenBackdrop}
+            onClick={closeFullscreen}
+            type="button"
+            aria-label={t('toast.close')}
+          />
+          <div className={styles.screenshotFullscreenContent}>
           <button
             className={styles.screenshotFullscreenClose}
             onClick={closeFullscreen}
@@ -84,8 +90,8 @@ const ScreenshotSidePanel: React.FC = () => {
             className={styles.screenshotFullscreenImg}
             src={imgSrc}
             alt={t('mcp.screenshot_alt')}
-            onClick={e => e.stopPropagation()}
           />
+          </div>
         </div>
       )}
     </div>
