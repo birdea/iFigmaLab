@@ -1,4 +1,9 @@
-import { handleOAuthToken, handleOAuthRefresh } from './routes/oauth';
+import {
+  handleOAuthCallback,
+  handleOAuthRefresh,
+  handleOAuthStart,
+  handleOAuthToken,
+} from './routes/oauth';
 import { handleMcpStatus, handleMcpContext, handleMcpScreenshot } from './routes/mcp';
 
 export interface Env {
@@ -49,6 +54,12 @@ export default {
       }
       if (path === '/api/figma/oauth/refresh' && request.method === 'POST') {
         return await handleOAuthRefresh(request, env, cors);
+      }
+      if (path === '/api/figma/oauth/start' && request.method === 'GET') {
+        return await handleOAuthStart(request, env);
+      }
+      if (path === '/api/figma/oauth/callback' && request.method === 'GET') {
+        return await handleOAuthCallback(request, env);
       }
 
       // MCP proxy endpoints
